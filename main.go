@@ -1,9 +1,12 @@
 package main
 
 import (
-	"fmt"
+	_ "fmt"
 	_ "playground/blog"
-	"playground/options"
+	_ "playground/options"
+	"playground/patterns"
+	_ "playground/patterns"
+	_ "playground/types"
 )
 
 func main() {
@@ -21,9 +24,11 @@ func main() {
 	//}
 	//fmt.Println(nums, err)
 
-	setup := options.New().Configure(options.WithA(3), options.WithB("a"))
-	fmt.Println(setup)
-	setup = options.New().Configure(options.WithDefaults())
-	fmt.Println(setup)
+	// setup := options.New().Configure(options.WithA(3), options.WithB("a"))
+	// fmt.Println(setup)
+	// setup = options.New().Configure(options.WithDefaults())
+	// fmt.Println(setup)
+	// types.Run()
+	patterns.RunSemaphore(100)
 
 }

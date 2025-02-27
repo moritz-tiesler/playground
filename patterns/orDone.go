@@ -1,7 +1,8 @@
-package main
+package patterns
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -51,4 +52,26 @@ func orDone(f func(), done <-chan struct{}) {
 			}
 		}
 	}()
+}
+
+func RunSemaphore(n int) {
+	fmt.Printf("starting sem with work=%d\n", n)
+	work := func(id int) {
+		extra := time.Duration(rand.Intn(20)*100) * time.Millisecond
+		time.Sleep(time.Millisecond*1000 + extra)
+		fmt.Printf("id=%d done\n", id)
+	}
+
+	sem := make(chan struct{}, 10)
+	var wg sync.WaitGroup
+	for i := range n {
+		wg.Add(1)
+		go func() {
+			sem <- struct{}{}
+			work(i)
+			<-sem
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }

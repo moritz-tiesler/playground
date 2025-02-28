@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	_ "fmt"
 	_ "playground/blog"
 	_ "playground/options"
@@ -29,6 +30,10 @@ func main() {
 	// setup = options.New().Configure(options.WithDefaults())
 	// fmt.Println(setup)
 	// types.Run()
-	patterns.RunSemaphore(100)
+	// patterns.RunSemaphore(100)
+
+	fmt.Println(
+		patterns.First("count = 10", patterns.Yahoo(), patterns.DuckDuckGo(), patterns.Google()),
+	)
 
 }

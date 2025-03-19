@@ -4,6 +4,8 @@ import (
 	"fmt"
 	_ "fmt"
 	_ "playground/blog"
+	_ "playground/encoding"
+	_ "playground/exp"
 	_ "playground/options"
 	"playground/patterns"
 	_ "playground/patterns"
@@ -32,8 +34,30 @@ func main() {
 	// types.Run()
 	// patterns.RunSemaphore(100)
 
-	fmt.Println(
-		patterns.First("count = 10", patterns.Yahoo(), patterns.DuckDuckGo(), patterns.Google()),
-	)
+	// fmt.Println(
+	// 	patterns.First("count = 10", patterns.Yahoo(), patterns.DuckDuckGo(), patterns.Google()),
+	// )
+
+	// tString := "aaabcaabdeffabfabuab"
+	// p, c := encoding.MostCommonPair(tString)
+	// fmt.Printf("pair=%s, occured=%d\n", p, c)
+	// aFunction := func(i int) string {
+	// 	return fmt.Sprintf("Called with %d", i)
+	// }
+
+	// callMe := func(f func(i int) string, arg int) string {
+	// 	return f(arg)
+	// }
+
+	// mock := exp.Fn(aFunction)
+
+	// res := callMe(aFunction, 4)
+	// fmt.Println(res)
+
+	// testVal := 0
+
+	for i := range patterns.Range(2, 10) {
+		fmt.Println(i)
+	}
 
 }

@@ -5,6 +5,7 @@ import (
 	_ "fmt"
 	_ "playground/blog"
 	_ "playground/encoding"
+	"playground/exp"
 	_ "playground/exp"
 	_ "playground/options"
 	"playground/patterns"
@@ -56,8 +57,16 @@ func main() {
 
 	// testVal := 0
 
+	for i := range patterns.ThreeTimes {
+		if i == 2 {
+			break
+		}
+		fmt.Println(i)
+	}
 	for i := range patterns.Range(2, 10) {
 		fmt.Println(i)
 	}
+
+	exp.Run()
 
 }

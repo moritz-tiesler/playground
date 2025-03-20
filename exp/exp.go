@@ -11,50 +11,44 @@ func ExecCallBack(cb func(int, int) int, arg int) {
 
 type Mock struct {
 	called int
-	copy   reflect.Value
-	Args   [][]reflect.Value
-}
-
-func (m *Mock) ArgsToSlice() {
-	for _, args := range m.Args {
-		for _, arg := range args {
-			fmt.Printf("%d\n", arg.Int())
-		}
-	}
 }
 
 func MakeMock(fptr any) *Mock {
 	m := &Mock{}
 
+	// get the value of the underlying function ptr
 	funcValue := reflect.ValueOf(fptr).Elem()
-	copy := reflect.New(funcValue.Type()).Elem() // Create a value of the correct type
+	// create fresh pointer to underlying function type
+	copy := reflect.New(funcValue.Type()).Elem()
+	// assign the value to the fresh pointer. This is a copy of the function
 	copy.Set(funcValue)
 
-	wrapCall := func(in []reflect.Value) []reflect.Value {
-		m.Args = append(m.Args, in)
+	wrapper := func(in []reflect.Value) []reflect.Value {
 		res := copy.Call(in)
+		// Track call data
 		m.called++
 		return res
 	}
 
-	makeMock := func(fptr any) {
+	wrapFunc := func(fptr any) {
 		fn := reflect.ValueOf(fptr).Elem()
-		v := reflect.MakeFunc(fn.Type(), wrapCall)
+		// swap the out original function for the wrapper
+		v := reflect.MakeFunc(fn.Type(), wrapper)
 		fn.Set(v)
 	}
-	makeMock(fptr)
+	wrapFunc(fptr)
 
 	return m
 }
 
 func Run() {
-	mockFunc := func(int, int) int {
+	impl := func(int, int) int {
 		fmt.Println("Mocke executed")
 		return 3
 	}
-	bruh := MakeMock(&mockFunc)
-	ExecCallBack(mockFunc, 3)
-	ExecCallBack(mockFunc, 3)
-	fmt.Println(bruh.called)
-	bruh.ArgsToSlice()
+	mock := MakeMock(&impl)
+	// execute function with modified impl
+	ExecCallBack(impl, 3)
+	ExecCallBack(impl, 3)
+	fmt.Println(mock.called)
 }

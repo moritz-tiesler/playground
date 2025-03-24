@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	_ "fmt"
 	"log"
 	"net/http"
@@ -78,4 +79,32 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	CallNamer(&NPC{name: "Bob"})
+	CallNamer(MakeNamer(func() string { return "Bob" }))
+
+}
+
+type Namer interface {
+	Name() string
+}
+
+type NPC struct {
+	name string
+}
+
+func (n *NPC) Name() string { return n.name }
+
+type NamerFunc func() string
+
+func (n NamerFunc) Name() string {
+	return n()
+}
+
+func CallNamer(n Namer) {
+	fmt.Println(n.Name())
+}
+
+func MakeNamer(f NamerFunc) Namer {
+	return NamerFunc(f)
 }

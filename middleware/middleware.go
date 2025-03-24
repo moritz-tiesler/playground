@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func NewServer() *http.ServeMux {
+func NewServeMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/home", home)

@@ -70,9 +70,9 @@ func main() {
 
 	// exp.Run()
 
-	mux := middleware.NewServer()
+	mux := middleware.NewServeMux()
 
-	log.Println("Running server")
+	fmt.Println("Running server")
 
 	err := http.ListenAndServe(":8080", middleware.LogRequestMiddleware(middleware.SecureHeadersMiddleware(mux)))
 

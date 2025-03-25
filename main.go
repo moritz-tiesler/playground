@@ -1,17 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	_ "fmt"
-	"log"
-	"net/http"
+	"os"
 	_ "playground/blog"
 	_ "playground/encoding"
 	_ "playground/exp"
-	"playground/middleware"
+	_ "playground/middleware"
 	_ "playground/options"
 	_ "playground/patterns"
 	_ "playground/types"
+	"strings"
+	"time"
 )
 
 func main() {
@@ -70,19 +72,67 @@ func main() {
 
 	// exp.Run()
 
-	mux := middleware.NewServeMux()
+	// mux := middleware.NewServeMux()
 
-	fmt.Println("Running server")
+	// fmt.Println("Running server")
 
-	err := http.ListenAndServe(":8080", middleware.LogRequestMiddleware(middleware.SecureHeadersMiddleware(mux)))
+	// err := http.ListenAndServe(":8080", middleware.LogRequestMiddleware(middleware.SecureHeadersMiddleware(mux)))
 
-	if err != nil {
-		log.Fatal(err)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// CallNamer(&NPC{name: "Bob"})
+	// CallNamer(MakeNamer(func() string { return "Bob" }))
+
+	input := make(chan string)
+	stop := make(chan struct{})
+	resume := make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case in := <-input:
+				if in == "s" {
+					fmt.Println("received stop")
+					stop <- struct{}{}
+				}
+				if in == "c" {
+					fmt.Println("received continue")
+					resume <- struct{}{}
+				}
+			}
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(2000 * time.Millisecond)
+		for {
+			select {
+			case <-stop:
+				ticker.Stop()
+				<-resume
+				ticker = time.NewTicker(2000 * time.Millisecond)
+			case <-ticker.C:
+				fmt.Println("running")
+			}
+		}
+	}()
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		input <- strings.TrimSpace(scanner.Text())
 	}
 
-	CallNamer(&NPC{name: "Bob"})
-	CallNamer(MakeNamer(func() string { return "Bob" }))
-
+	// go func() {
+	// 	halt := make(chan struct{})
+	// 	for {
+	// 		select {
+	// 		case <-stop:
+	// 			<-halt
+	// 		}
+	// 	}
+	// }()
 }
 
 type Namer interface {

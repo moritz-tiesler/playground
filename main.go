@@ -1,19 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	_ "fmt"
-	"os"
 	_ "playground/blog"
 	_ "playground/encoding"
 	_ "playground/exp"
 	_ "playground/middleware"
+	nuketheram "playground/nuke_the_ram"
 	_ "playground/options"
 	_ "playground/patterns"
 	_ "playground/types"
-	"strings"
-	"time"
 )
 
 func main() {
@@ -85,44 +82,44 @@ func main() {
 	// CallNamer(&NPC{name: "Bob"})
 	// CallNamer(MakeNamer(func() string { return "Bob" }))
 
-	input := make(chan string)
-	stop := make(chan struct{})
-	resume := make(chan struct{})
+	// input := make(chan string)
+	// stop := make(chan struct{})
+	// resume := make(chan struct{})
 
-	go func() {
-		for {
-			select {
-			case in := <-input:
-				if in == "s" {
-					fmt.Println("received stop")
-					stop <- struct{}{}
-				}
-				if in == "c" {
-					fmt.Println("received continue")
-					resume <- struct{}{}
-				}
-			}
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		select {
+	// 		case in := <-input:
+	// 			if in == "s" {
+	// 				fmt.Println("received stop")
+	// 				stop <- struct{}{}
+	// 			}
+	// 			if in == "c" {
+	// 				fmt.Println("received continue")
+	// 				resume <- struct{}{}
+	// 			}
+	// 		}
+	// 	}
+	// }()
 
-	go func() {
-		ticker := time.NewTicker(2000 * time.Millisecond)
-		for {
-			select {
-			case <-stop:
-				ticker.Stop()
-				<-resume
-				ticker = time.NewTicker(2000 * time.Millisecond)
-			case <-ticker.C:
-				fmt.Println("running")
-			}
-		}
-	}()
+	// go func() {
+	// 	ticker := time.NewTicker(2000 * time.Millisecond)
+	// 	for {
+	// 		select {
+	// 		case <-stop:
+	// 			ticker.Stop()
+	// 			<-resume
+	// 			ticker = time.NewTicker(2000 * time.Millisecond)
+	// 		case <-ticker.C:
+	// 			fmt.Println("running")
+	// 		}
+	// 	}
+	// }()
 
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		input <- strings.TrimSpace(scanner.Text())
-	}
+	// scanner := bufio.NewScanner(os.Stdin)
+	// for scanner.Scan() {
+	// 	input <- strings.TrimSpace(scanner.Text())
+	// }
 
 	// go func() {
 	// 	halt := make(chan struct{})
@@ -133,6 +130,7 @@ func main() {
 	// 		}
 	// 	}
 	// }()
+	nuketheram.Launch(10_000_000)
 }
 
 type Namer interface {

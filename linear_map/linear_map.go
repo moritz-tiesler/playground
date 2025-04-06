@@ -9,13 +9,26 @@ import (
 // TODO impl resizing
 
 type LMap[T comparable, U any] struct {
-	table []Entry[T, U]
-	capa  uint64
-	size  int
+	table           []Entry[T, U]
+	capa            uint64
+	size            int
+	enc             *gob.Encoder
+	buff            *bytes.Buffer
+	hops            int
+	hashesUsed      map[uint64]struct{}
+	truncHashesUsed map[uint64]struct{}
 }
 
 func New[T comparable, U any](capa uint64) *LMap[T, U] {
-	return &LMap[T, U]{table: make([]Entry[T, U], capa, capa), capa: capa}
+	var b bytes.Buffer
+	return &LMap[T, U]{
+		table:           make([]Entry[T, U], capa, capa),
+		capa:            capa,
+		enc:             gob.NewEncoder(&b),
+		buff:            &b,
+		hashesUsed:      make(map[uint64]struct{}),
+		truncHashesUsed: make(map[uint64]struct{}),
+	}
 }
 
 type Entry[T comparable, U any] struct {
@@ -26,16 +39,20 @@ type Entry[T comparable, U any] struct {
 
 func (m *LMap[T, U]) Hash(k T) uint64 {
 	var h = fnv.New64a()
-	var buf bytes.Buffer
-	encode(buf, k)
-	h.Write(buf.Bytes())
+	m.encode(k)
+	h.Write(m.buff.Bytes())
+	m.buff.Reset()
 	hash := h.Sum64()
-	return hash & (m.capa - 1)
+	m.hashesUsed[hash] = struct{}{}
+	truc := hash % m.capa
+	m.truncHashesUsed[hash] = struct{}{}
+	return truc
 }
 
 func (m *LMap[T, U]) Put(k T, v U) {
 	index := m.Hash(k)
 	for m.table[index].used {
+		m.hops++
 		index = (index + 1) % m.capa
 	}
 	m.table[index] = Entry[T, U]{k, v, true}
@@ -70,9 +87,9 @@ func (m *LMap[T, U]) Get(k T) (U, bool) {
 
 // TODO impl Delete()
 
-func encode[T comparable](buf bytes.Buffer, v T) error {
+func (m *LMap[T, U]) encode(v T) error {
 
-	err := gob.NewEncoder(&buf).Encode(v)
+	err := m.enc.Encode(v)
 	if err != nil {
 		return err
 	}

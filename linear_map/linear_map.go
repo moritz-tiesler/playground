@@ -14,6 +14,7 @@ type LMap[T comparable, U any] struct {
 	size  int
 	enc   *gob.Encoder
 	buff  *bytes.Buffer
+	colls int
 }
 
 func New[T comparable, U any](capa uint64) *LMap[T, U] {
@@ -38,14 +39,15 @@ func (m *LMap[T, U]) Hash(k T) uint64 {
 	h.Write(m.buff.Bytes())
 	m.buff.Reset()
 	hash := h.Sum64()
-	truc := hash % m.capa
+	truc := hash & (m.capa - 1)
 	return truc
 }
 
 func (m *LMap[T, U]) Put(k T, v U) {
 	index := m.Hash(k)
 	for m.table[index].used {
-		index = (index + 1) % m.capa
+		m.colls++
+		index = (index + 1) & (m.capa - 1)
 	}
 	m.table[index] = Entry[T, U]{k, v, true}
 	m.size++
@@ -66,7 +68,7 @@ func (m *LMap[T, U]) Get(k T) (U, bool) {
 		if m.table[index].key == k {
 			return m.table[index].value, true
 		}
-		index = (index + 1) % m.capa // Wrap around if necessary
+		index = (index + 1) & (m.capa - 1) // Wrap around if necessary
 
 		if index == originalIndex {
 			// If we've looped back to the start, the key is not present

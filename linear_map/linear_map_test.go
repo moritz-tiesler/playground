@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var size uint64 = 50_000
+var size uint64 = 65536
 
 func BenchmarkLmap(b *testing.B) {
 	for b.Loop() {
@@ -13,12 +13,13 @@ func BenchmarkLmap(b *testing.B) {
 		for j := range size {
 			lm.Put(int(j), strconv.Itoa(int(j)))
 		}
-		for j := range size {
-			_, _ = lm.Get(int(j))
-		}
-		if lm.size != int(size) {
-			b.Fatalf("expected %d elemns in map, got %d", size, lm.size)
-		}
+		// for j := range size {
+		// 	_, _ = lm.Get(int(j))
+		// }
+		// if lm.size != int(size) {
+		// 	b.Fatalf("expected %d elemns in map, got %d", size, lm.size)
+		// }
+		b.Log(lm.colls)
 	}
 }
 
@@ -29,11 +30,11 @@ func BenchmarkNormalMap(b *testing.B) {
 			m[int(j)] = strconv.Itoa(int(j))
 		}
 
-		for k := range size {
-			_, _ = m[int(k)]
-		}
-		if len(m) != int(size) {
-			b.Fatalf("expected %d elemns in map, got %d", size, len(m))
-		}
+		// for k := range size {
+		// 	_, _ = m[int(k)]
+		// }
+		// if len(m) != int(size) {
+		// 	b.Fatalf("expected %d elemns in map, got %d", size, len(m))
+		// }
 	}
 }

@@ -7,9 +7,10 @@ import (
 	_ "playground/encoding"
 	_ "playground/exp"
 	_ "playground/middleware"
-	nuketheram "playground/nuke_the_ram"
 	_ "playground/options"
+	"playground/patterns"
 	_ "playground/patterns"
+	"playground/set"
 	_ "playground/types"
 )
 
@@ -130,7 +131,13 @@ func main() {
 	// 		}
 	// 	}
 	// }()
-	nuketheram.Launch(10_000_000)
+	// nuketheram.Launch(10_000_000)
+	s := set.New(patterns.ThreeTimes)
+	for i := range s.Items() {
+		fmt.Println(i)
+	}
+	fmt.Println(s.Len())
+
 }
 
 type Namer interface {

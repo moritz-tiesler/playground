@@ -59,6 +59,10 @@ func (m *LMap[T, U]) Zero() U {
 	return z
 }
 
+func (m *LMap[T, U]) Clear() {
+	clear(m.table)
+}
+
 func (m *LMap[T, U]) Get(k T) (U, bool) {
 	index := m.Hash(k)
 

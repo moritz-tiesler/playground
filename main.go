@@ -11,6 +11,7 @@ import (
 	"playground/patterns"
 	_ "playground/patterns"
 	"playground/set"
+	singlefuncinterface "playground/single_func_interface"
 	_ "playground/types"
 )
 
@@ -137,6 +138,8 @@ func main() {
 		fmt.Println(i)
 	}
 	fmt.Println(s.Len())
+
+	singlefuncinterface.Run()
 
 }
 

@@ -59,6 +59,9 @@ func (s *Set[E]) Difference(other *Set[E]) *Set[E] {
 }
 
 func (s *Set[E]) Equals(other *Set[E]) bool {
+	if s.Len() != other.Len() {
+		return false
+	}
 	return reflect.DeepEqual(s.items, other.items)
 }
 

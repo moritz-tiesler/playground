@@ -155,12 +155,21 @@ func main() {
 	// 	}
 	// })
 
-	take := patterns.TakeWhile(seq1, func(i int) bool { return i < 5 })
-	for i := range take {
-		fmt.Println(i)
+	// take := patterns.TakeWhile(seq1, func(i int) bool { return i < 5 })
+	// for i := range take {
+	// 	fmt.Println(i)
+	// }
+
+	t := 0
+	for v := range patterns.Cycle(seq1) {
+		if t == 30 {
+			break
+		}
+		fmt.Println(v)
+		t++
 	}
 
-	patterns.ForEach(seq1, func(i int) { fmt.Println(i * 2) })
+	// patterns.ForEach(seq1, func(i int) { fmt.Println(i * 2) })
 
 }
 

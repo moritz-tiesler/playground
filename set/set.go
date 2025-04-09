@@ -3,6 +3,7 @@ package set
 import (
 	"iter"
 	"maps"
+	"slices"
 )
 
 type Set[E comparable] struct {
@@ -27,6 +28,22 @@ func (s *Set[E]) Len() int {
 
 func (s *Set[E]) Items() iter.Seq[E] {
 	return maps.Keys(s.items)
+}
+
+func (s *Set[E]) Has(v E) bool {
+	_, ok := s.items[v]
+	return ok
+}
+
+func (s *Set[E]) Intersection(other *Set[E]) *Set[E] {
+	empty := slices.Values([]E{})
+	intersected := New(empty)
+	for item := range s.items {
+		if other.Has(item) {
+			intersected.Put(item)
+		}
+	}
+	return intersected
 }
 
 func New[E comparable](rangable iter.Seq[E]) *Set[E] {

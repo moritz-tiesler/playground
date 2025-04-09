@@ -46,6 +46,31 @@ func (s *Set[E]) Intersection(other *Set[E]) *Set[E] {
 	return intersected
 }
 
+func (s *Set[E]) Union(other *Set[E]) *Set[E] {
+	unioned := New(s.Items())
+	for item := range other.items {
+		unioned.Put(item)
+	}
+	return unioned
+}
+
+func (s *Set[E]) SymmetricDifference(other *Set[E]) *Set[E] {
+	empty := slices.Values([]E{})
+	diff1 := New(empty)
+	diff2 := New(empty)
+	for item := range s.items {
+		if !other.Has(item) {
+			diff1.Put(item)
+		}
+	}
+	for item := range other.items {
+		if !s.Has(item) {
+			diff2.Put(item)
+		}
+	}
+	return diff1.Union(diff2)
+}
+
 func New[E comparable](rangable iter.Seq[E]) *Set[E] {
 	s := Set[E]{items: make(map[E]struct{})}
 	for v := range rangable {

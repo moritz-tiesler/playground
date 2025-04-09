@@ -35,11 +35,10 @@ func Merge[T any](seqs ...iter.Seq[T]) iter.Seq[T] {
 
 func Cycle[T any](seq iter.Seq[T]) iter.Seq[T] {
 	return func(yield func(T) bool) {
-	outer:
 		for {
 			for v := range seq {
 				if !yield(v) {
-					break outer
+					return
 				}
 			}
 		}

@@ -35,18 +35,19 @@ func Merge[T any](seqs ...iter.Seq[T]) iter.Seq[T] {
 
 func TakeWhile[T any](seq iter.Seq[T], predicate func(T) bool) iter.Seq[T] {
 	return func(yield func(T) bool) {
-		seq(func(v T) bool {
+		for v := range seq {
 			if !predicate(v) {
-				return false
+				return
 			}
-			return yield(v)
-		})
+			if !yield(v) {
+				return
+			}
+		}
 	}
 }
 
 func ForEach[T any](seq iter.Seq[T], action func(T)) {
-	seq(func(v T) bool {
+	for v := range seq {
 		action(v)
-		return true
-	})
+	}
 }

@@ -24,3 +24,29 @@ func ThreeTimes(yield func(i int) bool) {
 		return
 	}
 }
+
+func Merge[T any](seqs ...iter.Seq[T]) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, seq := range seqs {
+			seq(yield)
+		}
+	}
+}
+
+func TakeWhile[T any](seq iter.Seq[T], predicate func(T) bool) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		seq(func(v T) bool {
+			if !predicate(v) {
+				return false
+			}
+			return yield(v)
+		})
+	}
+}
+
+func ForEach[T any](seq iter.Seq[T], action func(T)) {
+	seq(func(v T) bool {
+		action(v)
+		return true
+	})
+}

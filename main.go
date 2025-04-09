@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	_ "fmt"
+	"iter"
 	_ "playground/blog"
 	_ "playground/encoding"
 	_ "playground/exp"
@@ -10,8 +11,6 @@ import (
 	_ "playground/options"
 	"playground/patterns"
 	_ "playground/patterns"
-	"playground/set"
-	singlefuncinterface "playground/single_func_interface"
 	_ "playground/types"
 )
 
@@ -133,13 +132,35 @@ func main() {
 	// 	}
 	// }()
 	// nuketheram.Launch(10_000_000)
-	s := set.New(patterns.ThreeTimes)
-	for i := range s.Items() {
+	// s := set.New(patterns.ThreeTimes)
+	// for i := range s.Items() {
+	// 	fmt.Println(i)
+	// }
+	// fmt.Println(s.Len())
+
+	// singlefuncinterface.Run()
+	seq1 := iter.Seq[int](func(yield func(int) bool) {
+		for i := 0; i < 10; i++ {
+			if !yield(i) {
+				return
+			}
+		}
+	})
+
+	// seq2 := iter.Seq[int](func(yield func(int) bool) {
+	// 	for i := 10; i < 13; i++ {
+	// 		if !yield(i) {
+	// 			return
+	// 		}
+	// 	}
+	// })
+
+	take := patterns.TakeWhile(seq1, func(i int) bool { return i < 5 })
+	for i := range take {
 		fmt.Println(i)
 	}
-	fmt.Println(s.Len())
 
-	singlefuncinterface.Run()
+	patterns.ForEach(seq1, func(i int) { fmt.Println(i * 2) })
 
 }
 

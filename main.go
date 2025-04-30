@@ -169,6 +169,13 @@ func main() {
 		t++
 	}
 
+	v := patterns.NewSingleTon[int]()
+	*v = 12
+	fmt.Println(*v)
+
+	v2 := patterns.NewSingleTon[int]()
+	fmt.Println(*v2)
+
 	// patterns.ForEach(seq1, func(i int) { fmt.Println(i * 2) })
 
 }

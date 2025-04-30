@@ -5,13 +5,13 @@ import (
 	"sync"
 )
 
-var cache map[any]any
+var cache map[any]any = make(map[any]any)
 
 var cacheMux sync.Mutex
 
 func NewSingleTon[T any]() *T {
-	var t *T
-	hash := reflect.TypeOf(t)
+	var zero [0]T
+	hash := reflect.TypeOf(zero).Elem()
 
 	cacheMux.Lock()
 	defer cacheMux.Unlock()

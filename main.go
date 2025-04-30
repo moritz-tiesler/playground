@@ -176,6 +176,13 @@ func main() {
 	v2 := patterns.NewSingleTon[int]()
 	fmt.Println(*v2)
 
+	n1 := patterns.NewSingleTon[Namer]()
+	*n1 = &NPC{name: "Gandalf"}
+	fmt.Println((*n1).Name())
+
+	n2 := patterns.NewSingleTon[Namer]()
+	fmt.Println((*n2).Name())
+	fmt.Printf("%v\n", *n1 == *n2)
 	// patterns.ForEach(seq1, func(i int) { fmt.Println(i * 2) })
 
 }

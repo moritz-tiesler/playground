@@ -1,4 +1,4 @@
-package exp
+package expect
 
 import (
 	"fmt"

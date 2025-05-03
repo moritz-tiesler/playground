@@ -63,3 +63,19 @@ func ForEach[T any](seq iter.Seq[T], action func(T)) {
 		action(v)
 	}
 }
+
+func PrimeSieve(limit int) iter.Seq[int] {
+	return func(yield func(int) bool) {
+		sieve := make([]bool, limit+1)
+		for i := 2; i <= limit; i++ {
+			if !sieve[i] {
+				if !yield(i) {
+					return
+				}
+				for j := i * i; j <= limit; j += i {
+					sieve[j] = true
+				}
+			}
+		}
+	}
+}

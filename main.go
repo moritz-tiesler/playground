@@ -6,7 +6,7 @@ import (
 	"iter"
 	_ "playground/blog"
 	_ "playground/encoding"
-	_ "playground/exp"
+	_ "playground/expect"
 	_ "playground/middleware"
 	_ "playground/options"
 	"playground/patterns"
@@ -184,6 +184,10 @@ func main() {
 	fmt.Println((*n2).Name())
 	fmt.Printf("%v\n", *n1 == *n2)
 	// patterns.ForEach(seq1, func(i int) { fmt.Println(i * 2) })
+
+	for i := range patterns.PrimeSieve(100) {
+		fmt.Println(i)
+	}
 
 }
 

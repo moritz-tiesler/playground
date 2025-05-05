@@ -8,11 +8,11 @@ import (
 
 func NewServer() *http.Server {
 	router := http.NewServeMux()
-	router.HandleFunc("/", home)
+	router.Handle("/", NewLoggingMiddleware(http.HandlerFunc(home)))
 	router.HandleFunc("/bye", bye)
 	// w.Header().Set("X-XSS-Protection", "1; mode-block")
 	stack := Stack(
-		LogRequestMiddleware(fmt.Printf),
+		// LogRequestMiddleware(fmt.Printf),
 		SecureHeadersMiddleware(map[string]string{
 			"X":               "1; mode-block",
 			"X-Frame-Options": "deny",

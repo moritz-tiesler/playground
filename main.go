@@ -7,6 +7,7 @@ import (
 	_ "playground/blog"
 	_ "playground/encoding"
 	_ "playground/expect"
+	"playground/middleware"
 	_ "playground/middleware"
 	_ "playground/options"
 	"playground/patterns"
@@ -188,6 +189,9 @@ func main() {
 	for i := range patterns.PrimeSieve(100) {
 		fmt.Println(i)
 	}
+
+	s := middleware.NewServer()
+	s.ListenAndServe()
 
 }
 

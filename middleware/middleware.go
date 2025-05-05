@@ -5,16 +5,19 @@ import (
 	"net/http"
 )
 
-func NewServeMux() *http.ServeMux {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/home", home)
-
-	return mux
+func NewServer() *http.Server {
+	router := http.NewServeMux()
+	router.HandleFunc("/", home)
+	stack := Stack(LogRequestMiddleware, SecureHeadersMiddleware)
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: stack(router),
+	}
+	return server
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Welcome to Go Middleware"))
+	w.Write([]byte("Welcome to Go Middleware\n"))
 }
 
 func LogRequestMiddleware(next http.Handler) http.Handler {
@@ -33,3 +36,19 @@ func SecureHeadersMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+type middleware func(http.Handler) http.Handler
+
+func Stack(middlewares ...middleware) middleware {
+	return func(next http.Handler) http.Handler {
+		for i := len(middlewares) - 1; i > -1; i-- {
+			m := middlewares[i]
+			next = m(next)
+		}
+		return next
+	}
+}
+
+// Stack(log, secure, home)
+
+// log(secure(home))

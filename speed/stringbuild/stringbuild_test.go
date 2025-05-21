@@ -1,4 +1,4 @@
-package speed
+package stringbuild
 
 import (
 	"math/rand"

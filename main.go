@@ -222,7 +222,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			<-t.Done
+			<-t.Done()
 			cm.Lock()
 			if t.Err != nil {
 				if errors.Is(t.Err, patterns.TaskKilled) {

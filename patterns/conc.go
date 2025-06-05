@@ -63,21 +63,27 @@ type Task[T any] struct {
 	f    func() (T, error)
 	Res  T
 	Err  error
-	Done chan struct{}
+	done chan struct{}
+}
+
+func (t *Task[T]) Done() <-chan struct{} {
+	return t.done
 }
 
 func (t *Task[T]) Cancel() {
 	t.stopWithError(TaskCanceled)
 }
 
+func (t *Task[T]) CancelWith(err error) {
+	t.stopWithError(err)
+}
+
 func (t *Task[T]) stopWithError(err error) {
 	select {
-	case <-t.Done:
+	case <-t.done:
 	default:
-		if t.Err == nil {
-			t.Err = err
-		}
-		close(t.Done)
+		t.Err = err
+		close(t.done)
 	}
 }
 
@@ -102,8 +108,8 @@ func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 	}
 	select {
 	case <-tq.done:
-		close(t.Done)
-	case <-t.Done:
+		close(t.done)
+	case <-t.done:
 	default:
 		tq.enqueue(t)
 	}
@@ -139,7 +145,7 @@ func NewQueue[T any](workers int) TaskQueue[T] {
 				case t, ok := <-work:
 					if ok {
 						select {
-						case <-t.Done:
+						case <-t.done:
 							continue
 						default:
 							runTask(t)
@@ -167,8 +173,8 @@ func runTask[T any](t *Task[T]) {
 	res, err := t.f()
 	t.Res, t.Err = res, err
 	select {
-	case <-t.Done:
+	case <-t.done:
 	default:
-		close(t.Done)
+		close(t.done)
 	}
 }

@@ -196,9 +196,8 @@ func main() {
 
 	q := patterns.NewQueue[string]()
 
-	ch := make(chan struct{})
 	var wg sync.WaitGroup
-	for i := range 200 {
+	for i := range 80 {
 		f := func() (string, error) {
 			s := rand.Intn(200)
 			fmt.Printf("func (%d) running\n", i)
@@ -209,22 +208,22 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			select {
-			case <-t.Done:
-				fmt.Printf("func (%d) done\n", i)
-			case <-ch:
+			<-t.Done
+			if t.Err != nil {
 				fmt.Printf("func (%d) aborted\n", i)
+			} else {
+				fmt.Printf("func (%d) done\n", i)
 			}
 		}()
 
 	}
+	var rest int
 	go func() {
-		<-time.After(5 * time.Second)
-		rest := q.Kill()
-		close(ch)
-		fmt.Println(rest)
+		<-time.After(2 * time.Second)
+		rest = q.Kill()
 	}()
 	wg.Wait()
+	fmt.Printf("%d tasks remaining\n", rest)
 
 }
 

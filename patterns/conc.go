@@ -1,6 +1,9 @@
 package patterns
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 func AttemptWrite[T any](ch chan T, v T) bool {
 	select {
@@ -77,22 +80,35 @@ func (s *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 		nil,
 		ch,
 	}
-	go func() {
-		select {
-		case s.work <- t:
-		case <-s.done:
-		}
-	}()
+	select {
+	case <-s.done:
+		close(t.Done)
+	default:
+		go func() {
+			s.enqueue(t)
+		}()
+	}
 	return t
+}
+
+func (s *taskQueue[T]) enqueue(t *Task[T]) {
+	select {
+	case s.work <- t:
+	case <-s.done:
+		close(t.Done)
+	}
 }
 
 func (s *taskQueue[T]) Kill() int {
 	close(s.done)
+	close(s.work)
 	return len(s.work)
 }
 
+var TaskKilled error = errors.New("Task killed")
+
 func NewQueue[T any]() TaskQueue[T] {
-	work := make(chan *Task[T])
+	work := make(chan *Task[T], 1000)
 	workers := 4
 	q := &taskQueue[T]{
 		work,
@@ -102,11 +118,19 @@ func NewQueue[T any]() TaskQueue[T] {
 		go func() {
 			for {
 				select {
-				case t := <-work:
-					res, err := t.f()
-					t.Res, t.Err = res, err
-					close(t.Done)
+				case t, ok := <-work:
+					if ok {
+						res, err := t.f()
+						t.Res, t.Err = res, err
+						close(t.Done)
+					} else {
+						return
+					}
 				case <-q.done:
+					for t := range work {
+						t.Err = TaskKilled
+						close(t.Done)
+					}
 					return
 				}
 			}

@@ -54,11 +54,20 @@ func GoAndCollect[T any](res chan T, fs ...func() (T, error)) []T {
 	return results
 }
 
+var (
+	TaskKilled   error = errors.New("Task killed")
+	TaskCanceled error = errors.New("Task canceled")
+)
+
 type Task[T any] struct {
 	f    func() (T, error)
 	Res  T
 	Err  error
 	Done chan struct{}
+}
+
+func (t *Task[T]) Cancel() {
+	stopWithError(t, TaskCanceled)
 }
 
 type TaskQueue[T any] interface {
@@ -105,8 +114,6 @@ func (s *taskQueue[T]) Kill() int {
 	return len(s.work)
 }
 
-var TaskKilled error = errors.New("Task killed")
-
 func NewQueue[T any]() TaskQueue[T] {
 	work := make(chan *Task[T], 1000)
 	workers := 4
@@ -120,16 +127,24 @@ func NewQueue[T any]() TaskQueue[T] {
 				select {
 				case t, ok := <-work:
 					if ok {
-						res, err := t.f()
-						t.Res, t.Err = res, err
-						close(t.Done)
+						select {
+						case <-t.Done:
+							continue
+						default:
+							res, err := t.f()
+							t.Res, t.Err = res, err
+							select {
+							case <-t.Done:
+							default:
+								close(t.Done)
+							}
+						}
 					} else {
 						return
 					}
 				case <-q.done:
 					for t := range work {
-						t.Err = TaskKilled
-						close(t.Done)
+						stopWithError(t, TaskKilled)
 					}
 					return
 				}
@@ -137,4 +152,13 @@ func NewQueue[T any]() TaskQueue[T] {
 		}()
 	}
 	return q
+}
+
+func stopWithError[T any](t *Task[T], err error) {
+	select {
+	case <-t.Done:
+	default:
+		t.Err = err
+		close(t.Done)
+	}
 }

@@ -197,20 +197,26 @@ func main() {
 	q := patterns.NewQueue[string]()
 
 	var wg sync.WaitGroup
-	for i := range 80 {
+	for i := range 800 {
+		s := rand.Intn(200)
 		f := func() (string, error) {
-			s := rand.Intn(200)
 			fmt.Printf("func (%d) running\n", i)
 			time.Sleep(time.Millisecond * time.Duration(s))
 			return "", nil
 		}
 		t := q.Push(f)
+		if s%15 == 0 {
+			go func() {
+				<-time.After(time.Millisecond * time.Duration(s) / time.Duration(2))
+				t.Cancel()
+			}()
+		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			<-t.Done
 			if t.Err != nil {
-				fmt.Printf("func (%d) aborted\n", i)
+				fmt.Printf("func (%d) aborted: %s\n", i, t.Err)
 			} else {
 				fmt.Printf("func (%d) done\n", i)
 			}

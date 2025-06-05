@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	_ "fmt"
 	"math/rand"
@@ -194,10 +195,17 @@ func main() {
 	// s := middleware.NewServer()
 	// s.ListenAndServe()
 
-	q := patterns.NewQueue[string]()
+	q := patterns.NewQueue[string](4)
 
 	var wg sync.WaitGroup
-	for i := range 800 {
+	var (
+		cm        sync.Mutex
+		completed int
+		killed    int
+		canceled  int
+		queued    int = 500
+	)
+	for i := range queued {
 		s := rand.Intn(200)
 		f := func() (string, error) {
 			fmt.Printf("func (%d) running\n", i)
@@ -215,21 +223,33 @@ func main() {
 		go func() {
 			defer wg.Done()
 			<-t.Done
+			cm.Lock()
 			if t.Err != nil {
+				if errors.Is(t.Err, patterns.TaskKilled) {
+					killed++
+				}
+				if errors.Is(t.Err, patterns.TaskCanceled) {
+					canceled++
+				}
+
+				cm.Unlock()
 				fmt.Printf("func (%d) aborted: %s\n", i, t.Err)
 			} else {
+				completed++
+				cm.Unlock()
 				fmt.Printf("func (%d) done\n", i)
 			}
 		}()
 
 	}
-	var rest int
 	go func() {
-		<-time.After(2 * time.Second)
-		rest = q.Kill()
+		<-time.After(3 * time.Second)
+		_ = q.Kill()
 	}()
 	wg.Wait()
-	fmt.Printf("%d tasks remaining\n", rest)
+	fmt.Printf("%d/%d tasks completed\n", completed, queued)
+	fmt.Printf("%d/%d tasks canceled\n", canceled, queued)
+	fmt.Printf("%d/%d tasks killed\n", killed, queued)
 
 }
 

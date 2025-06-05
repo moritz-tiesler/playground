@@ -67,7 +67,18 @@ type Task[T any] struct {
 }
 
 func (t *Task[T]) Cancel() {
-	stopWithError(t, TaskCanceled)
+	t.stopWithError(TaskCanceled)
+}
+
+func (t *Task[T]) stopWithError(err error) {
+	select {
+	case <-t.Done:
+	default:
+		if t.Err == nil {
+			t.Err = err
+		}
+		close(t.Done)
+	}
 }
 
 type TaskQueue[T any] interface {
@@ -80,7 +91,7 @@ type taskQueue[T any] struct {
 	done chan struct{}
 }
 
-func (s *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
+func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 	var res T
 	ch := make(chan struct{})
 	t := &Task[T]{
@@ -90,33 +101,33 @@ func (s *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 		ch,
 	}
 	select {
-	case <-s.done:
+	case <-tq.done:
 		close(t.Done)
+	case <-t.Done:
 	default:
-		go func() {
-			s.enqueue(t)
-		}()
+		tq.enqueue(t)
 	}
 	return t
 }
 
-func (s *taskQueue[T]) enqueue(t *Task[T]) {
-	select {
-	case s.work <- t:
-	case <-s.done:
-		close(t.Done)
-	}
+func (tq *taskQueue[T]) enqueue(t *Task[T]) {
+	go func() {
+		select {
+		case tq.work <- t:
+		case <-tq.done:
+			t.stopWithError(TaskKilled)
+		}
+	}()
 }
 
-func (s *taskQueue[T]) Kill() int {
-	close(s.done)
-	close(s.work)
-	return len(s.work)
+func (tq *taskQueue[T]) Kill() int {
+	close(tq.done)
+	close(tq.work)
+	return len(tq.work)
 }
 
-func NewQueue[T any]() TaskQueue[T] {
-	work := make(chan *Task[T], 1000)
-	workers := 4
+func NewQueue[T any](workers int) TaskQueue[T] {
+	work := make(chan *Task[T])
 	q := &taskQueue[T]{
 		work,
 		make(chan struct{}),
@@ -131,21 +142,13 @@ func NewQueue[T any]() TaskQueue[T] {
 						case <-t.Done:
 							continue
 						default:
-							res, err := t.f()
-							t.Res, t.Err = res, err
-							select {
-							case <-t.Done:
-							default:
-								close(t.Done)
-							}
+							runTask(t)
 						}
 					} else {
 						return
 					}
 				case <-q.done:
-					for t := range work {
-						stopWithError(t, TaskKilled)
-					}
+					q.cancelWork()
 					return
 				}
 			}
@@ -154,11 +157,18 @@ func NewQueue[T any]() TaskQueue[T] {
 	return q
 }
 
-func stopWithError[T any](t *Task[T], err error) {
+func (tq *taskQueue[T]) cancelWork() {
+	for t := range tq.work {
+		t.stopWithError(TaskKilled)
+	}
+}
+
+func runTask[T any](t *Task[T]) {
+	res, err := t.f()
+	t.Res, t.Err = res, err
 	select {
 	case <-t.Done:
 	default:
-		t.Err = err
 		close(t.Done)
 	}
 }

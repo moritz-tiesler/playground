@@ -3,16 +3,17 @@ package main
 import (
 	"fmt"
 	_ "fmt"
-	"iter"
+	"math/rand"
 	_ "playground/blog"
 	_ "playground/encoding"
 	_ "playground/expect"
-	"playground/middleware"
 	_ "playground/middleware"
 	_ "playground/options"
 	"playground/patterns"
 	_ "playground/patterns"
 	_ "playground/types"
+	"sync"
+	"time"
 )
 
 func main() {
@@ -140,13 +141,13 @@ func main() {
 	// fmt.Println(s.Len())
 
 	// singlefuncinterface.Run()
-	seq1 := iter.Seq[int](func(yield func(int) bool) {
-		for i := 0; i < 10; i++ {
-			if !yield(i) {
-				return
-			}
-		}
-	})
+	// seq1 := iter.Seq[int](func(yield func(int) bool) {
+	// 	for i := 0; i < 10; i++ {
+	// 		if !yield(i) {
+	// 			return
+	// 		}
+	// 	}
+	// })
 
 	// seq2 := iter.Seq[int](func(yield func(int) bool) {
 	// 	for i := 10; i < 13; i++ {
@@ -161,37 +162,69 @@ func main() {
 	// 	fmt.Println(i)
 	// }
 
-	t := 0
-	for v := range patterns.Cycle(seq1) {
-		if t == 30 {
-			break
-		}
-		fmt.Println(v)
-		t++
-	}
+	// t := 0
+	// for v := range patterns.Cycle(seq1) {
+	// 	if t == 30 {
+	// 		break
+	// 	}
+	// 	fmt.Println(v)
+	// 	t++
+	// }
 
-	v := patterns.NewSingleTon[int]()
-	*v = 12
-	fmt.Println(*v)
+	// v := patterns.NewSingleTon[int]()
+	// *v = 12
+	// fmt.Println(*v)
 
-	v2 := patterns.NewSingleTon[int]()
-	fmt.Println(*v2)
+	// v2 := patterns.NewSingleTon[int]()
+	// fmt.Println(*v2)
 
-	n1 := patterns.NewSingleTon[Namer]()
-	*n1 = &NPC{name: "Gandalf"}
-	fmt.Println((*n1).Name())
+	// n1 := patterns.NewSingleTon[Namer]()
+	// *n1 = &NPC{name: "Gandalf"}
+	// fmt.Println((*n1).Name())
 
-	n2 := patterns.NewSingleTon[Namer]()
-	fmt.Println((*n2).Name())
-	fmt.Printf("%v\n", *n1 == *n2)
+	// n2 := patterns.NewSingleTon[Namer]()
+	// fmt.Println((*n2).Name())
+	// fmt.Printf("%v\n", *n1 == *n2)
 	// patterns.ForEach(seq1, func(i int) { fmt.Println(i * 2) })
 
-	for i := range patterns.PrimeSieve(100) {
-		fmt.Println(i)
-	}
+	// for i := range patterns.PrimeSieve(100) {
+	// 	fmt.Println(i)
+	// }
 
-	s := middleware.NewServer()
-	s.ListenAndServe()
+	// s := middleware.NewServer()
+	// s.ListenAndServe()
+
+	q := patterns.NewQueue[string]()
+
+	ch := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := range 200 {
+		f := func() (string, error) {
+			s := rand.Intn(200)
+			fmt.Printf("func (%d) running\n", i)
+			time.Sleep(time.Millisecond * time.Duration(s))
+			return "", nil
+		}
+		t := q.Push(f)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case <-t.Done:
+				fmt.Printf("func (%d) done\n", i)
+			case <-ch:
+				fmt.Printf("func (%d) aborted\n", i)
+			}
+		}()
+
+	}
+	go func() {
+		<-time.After(5 * time.Second)
+		rest := q.Kill()
+		close(ch)
+		fmt.Println(rest)
+	}()
+	wg.Wait()
 
 }
 

@@ -63,6 +63,8 @@ type Task[T any] struct {
 	f    func() (T, error)
 	Res  T
 	Err  error
+	once sync.Once
+	mu   sync.Mutex
 	done chan struct{}
 }
 
@@ -70,21 +72,22 @@ func (t *Task[T]) Done() <-chan struct{} {
 	return t.done
 }
 
+func (t *Task[T]) Complete(result T, err error) {
+	t.once.Do(func() {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+		t.Res = result
+		t.Err = err
+		close(t.done)
+	})
+}
+
 func (t *Task[T]) Cancel() {
-	t.stopWithError(TaskCanceled)
+	t.Complete(t.Res, TaskCanceled)
 }
 
 func (t *Task[T]) CancelWith(err error) {
-	t.stopWithError(err)
-}
-
-func (t *Task[T]) stopWithError(err error) {
-	select {
-	case <-t.done:
-	default:
-		t.Err = err
-		close(t.done)
-	}
+	t.Complete(t.Res, err)
 }
 
 type TaskQueue[T any] interface {
@@ -95,6 +98,7 @@ type TaskQueue[T any] interface {
 type taskQueue[T any] struct {
 	work chan *Task[T]
 	done chan struct{}
+	wg   sync.WaitGroup
 }
 
 func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
@@ -104,6 +108,8 @@ func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 		f,
 		res,
 		nil,
+		sync.Once{},
+		sync.Mutex{},
 		ch,
 	}
 	select {
@@ -121,7 +127,7 @@ func (tq *taskQueue[T]) enqueue(t *Task[T]) {
 		select {
 		case tq.work <- t:
 		case <-tq.done:
-			t.stopWithError(TaskKilled)
+			t.CancelWith(TaskKilled)
 		}
 	}()
 }
@@ -129,23 +135,26 @@ func (tq *taskQueue[T]) enqueue(t *Task[T]) {
 func (tq *taskQueue[T]) Kill() int {
 	close(tq.done)
 	close(tq.work)
+	tq.wg.Wait()
 	return len(tq.work)
 }
 
 func NewQueue[T any](workers int) TaskQueue[T] {
 	work := make(chan *Task[T])
 	q := &taskQueue[T]{
-		work,
-		make(chan struct{}),
+		work: work,
+		done: make(chan struct{}),
 	}
+	q.wg.Add(workers)
 	for range workers {
 		go func() {
+			defer q.wg.Done()
 			for {
 				select {
 				case t, ok := <-work:
 					if ok {
 						select {
-						case <-t.done:
+						case <-t.Done():
 							continue
 						default:
 							runTask(t)
@@ -165,16 +174,20 @@ func NewQueue[T any](workers int) TaskQueue[T] {
 
 func (tq *taskQueue[T]) cancelWork() {
 	for t := range tq.work {
-		t.stopWithError(TaskKilled)
+		select {
+		case <-t.Done():
+		default:
+			t.Complete(t.Res, TaskKilled)
+		}
 	}
 }
 
 func runTask[T any](t *Task[T]) {
-	res, err := t.f()
-	t.Res, t.Err = res, err
+	// TODO: maybe move the function exection into the default case?
 	select {
-	case <-t.done:
+	case <-t.Done():
 	default:
-		close(t.done)
+		res, err := t.f()
+		t.Complete(res, err)
 	}
 }

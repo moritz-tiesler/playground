@@ -195,7 +195,14 @@ func main() {
 	// s := middleware.NewServer()
 	// s.ListenAndServe()
 
-	q := patterns.NewQueue[string](4)
+	badLuck := func(r any, _ *string, err *error) {
+		*err = fmt.Errorf("toobad")
+	}
+
+	q := patterns.NewQueue(
+		patterns.WithWorkers[string](4),
+		patterns.WithPanicDefer(badLuck),
+	)
 
 	var wg sync.WaitGroup
 	var (
@@ -205,6 +212,7 @@ func main() {
 		canceled  int
 		queued    int = 500
 		paniced   int
+		otherErr  int
 	)
 	for i := range queued {
 		s := rand.Intn(200)
@@ -228,24 +236,25 @@ func main() {
 			defer wg.Done()
 			<-t.Done()
 			cm.Lock()
+			defer cm.Unlock()
 			if t.Err != nil {
 				if errors.Is(t.Err, patterns.TaskKilled) {
 					killed++
+					return
 				}
 				if errors.Is(t.Err, patterns.TaskCanceled) {
 					canceled++
+					return
 				}
 				if errors.Is(t.Err, patterns.ErrTaskPanic) {
-					fmt.Println(t.Err)
 					paniced++
+					return
 				}
-
-				cm.Unlock()
-			} else {
-				completed++
-				cm.Unlock()
-				fmt.Printf("func (%d) done\n", i)
+				otherErr++
+				return
 			}
+			completed++
+			fmt.Printf("func (%d) done\n", i)
 		}()
 
 	}
@@ -258,7 +267,8 @@ func main() {
 	fmt.Printf("%d/%d tasks canceled\n", canceled, queued)
 	fmt.Printf("%d/%d tasks killed\n", killed, queued)
 	fmt.Printf("%d/%d tasks paniced\n", paniced, queued)
-	fmt.Printf("%d/%d tasks accounted for\n", paniced+killed+completed+canceled, queued)
+	fmt.Printf("%d/%d tasks errored\n", otherErr, queued)
+	fmt.Printf("%d/%d tasks accounted for\n", otherErr+paniced+killed+completed+canceled, queued)
 
 }
 

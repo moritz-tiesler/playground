@@ -96,10 +96,45 @@ type TaskQueue[T any] interface {
 	Kill() int
 }
 
+type opts[T any] struct {
+	panicDefer func(any, *T, *error)
+	numWorkers int
+	queueBuf   int
+}
+
+type option[T any] func(*opts[T])
+
+func WithWorkers[T any](n int) option[T] {
+	return func(o *opts[T]) {
+		o.numWorkers = n
+	}
+}
+
+func WithQueueBuffer[T any](n int) option[T] {
+	return func(o *opts[T]) {
+		o.queueBuf = n
+	}
+}
+
+func WithPanicDefer[T any](f func(any, *T, *error)) option[T] {
+	return func(o *opts[T]) {
+		o.panicDefer = f
+	}
+}
+
+func defaultOpts[T any]() *opts[T] {
+	return &opts[T]{
+		nil,
+		1,
+		0,
+	}
+}
+
 type taskQueue[T any] struct {
 	work chan *Task[T]
 	done chan struct{}
 	wg   sync.WaitGroup
+	opts *opts[T]
 }
 
 func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
@@ -139,14 +174,19 @@ func (tq *taskQueue[T]) Kill() int {
 	return len(tq.work)
 }
 
-func NewQueue[T any](workers int) TaskQueue[T] {
-	work := make(chan *Task[T])
+func NewQueue[T any](options ...option[T]) TaskQueue[T] {
+	opts := defaultOpts[T]()
+	for _, o := range options {
+		o(opts)
+	}
+	work := make(chan *Task[T], opts.numWorkers)
 	q := &taskQueue[T]{
 		work: work,
 		done: make(chan struct{}),
+		opts: opts,
 	}
-	q.wg.Add(workers)
-	for range workers {
+	q.wg.Add(q.opts.numWorkers)
+	for range q.opts.numWorkers {
 		go func() {
 			defer q.wg.Done()
 			for {
@@ -157,7 +197,7 @@ func NewQueue[T any](workers int) TaskQueue[T] {
 						case <-t.Done():
 							continue
 						default:
-							runTask(t)
+							q.runTask(t)
 						}
 					} else {
 						return
@@ -182,24 +222,30 @@ func (tq *taskQueue[T]) cancelWork() {
 	}
 }
 
-func runTask[T any](t *Task[T]) {
+func (tq *taskQueue[T]) runTask(t *Task[T]) {
 	// TODO: panic/recover with named err return?
 	select {
 	case <-t.Done():
 	default:
-		res, err := wrapWithRecover(t.f)
+		res, err := tq.wrapWithRecover(t.f)
 		t.Complete(res, err)
 	}
 }
 
 var ErrTaskPanic error = errors.New("Task panic")
 
-func wrapWithRecover[T any](f func() (T, error)) (res T, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%v: %w", r, ErrTaskPanic)
-		}
-	}()
+func WrapPanic[T any](rec any, _ *T, err *error) {
+	*err = fmt.Errorf("%v: %w", rec, ErrTaskPanic)
+}
+
+func (tq *taskQueue[T]) wrapWithRecover(f func() (T, error)) (res T, err error) {
+	if tq.opts.panicDefer != nil {
+		defer func() {
+			if r := recover(); r != nil {
+				tq.opts.panicDefer(r, &res, &err)
+			}
+		}()
+	}
 	res, err = f()
 	return
 }

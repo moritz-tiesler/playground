@@ -114,8 +114,7 @@ func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 	}
 	select {
 	case <-tq.done:
-		close(t.done)
-	case <-t.done:
+		t.CancelWith(TaskKilled)
 	default:
 		tq.enqueue(t)
 	}

@@ -2,6 +2,7 @@ package patterns
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -182,11 +183,23 @@ func (tq *taskQueue[T]) cancelWork() {
 }
 
 func runTask[T any](t *Task[T]) {
-	// TODO: maybe move the function exection into the default case?
+	// TODO: panic/recover with named err return?
 	select {
 	case <-t.Done():
 	default:
-		res, err := t.f()
+		res, err := wrapWithRecover(t.f)
 		t.Complete(res, err)
 	}
+}
+
+var ErrTaskPanic error = errors.New("Task panic")
+
+func wrapWithRecover[T any](f func() (T, error)) (res T, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v: %w", r, ErrTaskPanic)
+		}
+	}()
+	res, err = f()
+	return
 }

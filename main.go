@@ -204,16 +204,20 @@ func main() {
 		killed    int
 		canceled  int
 		queued    int = 500
+		paniced   int
 	)
 	for i := range queued {
 		s := rand.Intn(200)
-		f := func() (string, error) {
+		f := func() (res string, err error) {
+			if s%15 == 0 {
+				panic("bad number")
+			}
 			fmt.Printf("func (%d) running\n", i)
 			time.Sleep(time.Millisecond * time.Duration(s))
-			return "", nil
+			return
 		}
 		t := q.Push(f)
-		if s%15 == 0 {
+		if s%7 == 0 {
 			go func() {
 				<-time.After(time.Millisecond * time.Duration(s) / time.Duration(2))
 				t.Cancel()
@@ -231,9 +235,12 @@ func main() {
 				if errors.Is(t.Err, patterns.TaskCanceled) {
 					canceled++
 				}
+				if errors.Is(t.Err, patterns.ErrTaskPanic) {
+					fmt.Println(t.Err)
+					paniced++
+				}
 
 				cm.Unlock()
-				fmt.Printf("func (%d) aborted: %s\n", i, t.Err)
 			} else {
 				completed++
 				cm.Unlock()
@@ -250,6 +257,8 @@ func main() {
 	fmt.Printf("%d/%d tasks completed\n", completed, queued)
 	fmt.Printf("%d/%d tasks canceled\n", canceled, queued)
 	fmt.Printf("%d/%d tasks killed\n", killed, queued)
+	fmt.Printf("%d/%d tasks paniced\n", paniced, queued)
+	fmt.Printf("%d/%d tasks accounted for\n", paniced+killed+completed+canceled, queued)
 
 }
 

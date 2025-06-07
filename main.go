@@ -201,6 +201,7 @@ func main() {
 
 	q := patterns.NewQueue(
 		patterns.WithWorkers[string](4),
+		// patterns.WithQueueBuffer[string](1000),
 		patterns.WithPanicDefer(badLuck),
 	)
 

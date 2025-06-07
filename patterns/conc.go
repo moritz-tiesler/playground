@@ -74,6 +74,10 @@ func (t *Task[T]) Done() <-chan struct{} {
 }
 
 func (t *Task[T]) Complete(result T, err error) {
+	t.complete(result, err)
+}
+
+func (t *Task[T]) complete(result T, err error) {
 	t.once.Do(func() {
 		t.mu.Lock()
 		defer t.mu.Unlock()
@@ -84,11 +88,13 @@ func (t *Task[T]) Complete(result T, err error) {
 }
 
 func (t *Task[T]) Cancel() {
-	t.Complete(t.Res, TaskCanceled)
+	var zero T
+	t.complete(zero, TaskCanceled)
 }
 
 func (t *Task[T]) CancelWith(err error) {
-	t.Complete(t.Res, err)
+	var zero T
+	t.complete(zero, err)
 }
 
 type TaskQueue[T any] interface {
@@ -185,6 +191,7 @@ func NewQueue[T any](options ...option[T]) TaskQueue[T] {
 		done: make(chan struct{}),
 		opts: opts,
 	}
+	// TODO: put this in a start method
 	q.wg.Add(q.opts.numWorkers)
 	for range q.opts.numWorkers {
 		go func() {
@@ -217,13 +224,12 @@ func (tq *taskQueue[T]) cancelWork() {
 		select {
 		case <-t.Done():
 		default:
-			t.Complete(t.Res, TaskKilled)
+			t.CancelWith(TaskKilled)
 		}
 	}
 }
 
 func (tq *taskQueue[T]) runTask(t *Task[T]) {
-	// TODO: panic/recover with named err return?
 	select {
 	case <-t.Done():
 	default:

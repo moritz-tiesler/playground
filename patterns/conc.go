@@ -204,7 +204,9 @@ func (tq *taskQueue[T]) Start() {
 			}
 		}()
 	}
+	tq.wg.Add(1)
 	go func() {
+		defer tq.wg.Done()
 		for {
 			select {
 			case guest := <-tq.bouncer:

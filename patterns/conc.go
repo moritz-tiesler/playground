@@ -157,12 +157,7 @@ func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 		sync.Mutex{},
 		ch,
 	}
-	select {
-	case <-tq.done:
-		t.CancelWith(TaskKilled)
-	default:
-		tq.tryEnqueue(t)
-	}
+	tq.tryEnqueue(t)
 	return t
 }
 

@@ -100,6 +100,7 @@ func (t *Task[T]) CancelWith(err error) {
 type TaskQueue[T any] interface {
 	Push(func() (T, error)) *Task[T]
 	Kill() int
+	Start()
 }
 
 type opts[T any] struct {
@@ -137,12 +138,14 @@ func defaultOpts[T any]() *opts[T] {
 }
 
 type taskQueue[T any] struct {
-	work chan *Task[T]
-	done chan struct{}
-	wg   sync.WaitGroup
-	opts *opts[T]
+	work    chan *Task[T]
+	bouncer chan *Task[T]
+	done    chan struct{}
+	wg      sync.WaitGroup
+	opts    *opts[T]
 }
 
+// TODO: return true if task was pushed successfully
 func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 	var res T
 	ch := make(chan struct{})
@@ -158,15 +161,15 @@ func (tq *taskQueue[T]) Push(f func() (T, error)) *Task[T] {
 	case <-tq.done:
 		t.CancelWith(TaskKilled)
 	default:
-		tq.enqueue(t)
+		tq.tryEnqueue(t)
 	}
 	return t
 }
 
-func (tq *taskQueue[T]) enqueue(t *Task[T]) {
+func (tq *taskQueue[T]) tryEnqueue(t *Task[T]) {
 	go func() {
 		select {
-		case tq.work <- t:
+		case tq.bouncer <- t:
 		case <-tq.done:
 			t.CancelWith(TaskKilled)
 		}
@@ -175,7 +178,6 @@ func (tq *taskQueue[T]) enqueue(t *Task[T]) {
 
 func (tq *taskQueue[T]) Kill() int {
 	close(tq.done)
-	close(tq.work)
 	tq.wg.Wait()
 	return len(tq.work)
 }
@@ -185,42 +187,44 @@ func NewQueue[T any](options ...option[T]) TaskQueue[T] {
 	for _, o := range options {
 		o(opts)
 	}
-	work := make(chan *Task[T], opts.numWorkers)
+	work := make(chan *Task[T], opts.queueBuf)
+	bouncer := make(chan *Task[T])
 	q := &taskQueue[T]{
-		work: work,
-		done: make(chan struct{}),
-		opts: opts,
+		work:    work,
+		done:    make(chan struct{}),
+		opts:    opts,
+		bouncer: bouncer,
 	}
-	// TODO: put this in a start method
-	q.wg.Add(q.opts.numWorkers)
-	for range q.opts.numWorkers {
-		go func() {
-			defer q.wg.Done()
-			for {
-				select {
-				case t, ok := <-work:
-					if ok {
-						select {
-						case <-t.Done():
-							continue
-						default:
-							q.runTask(t)
-						}
-					} else {
-						return
-					}
-				case <-q.done:
-					q.cancelWork()
-					return
-				}
-			}
-		}()
-	}
+
 	return q
 }
 
-func (tq *taskQueue[T]) cancelWork() {
-	for t := range tq.work {
+func (tq *taskQueue[T]) Start() {
+	tq.wg.Add(tq.opts.numWorkers)
+	for range tq.opts.numWorkers {
+		go func() {
+			defer tq.wg.Done()
+			for t := range tq.work {
+				tq.runTask(t)
+			}
+		}()
+	}
+	go func() {
+		for {
+			select {
+			case guest := <-tq.bouncer:
+				tq.work <- guest
+			case <-tq.done:
+				close(tq.work)
+				tq.cancelWork(tq.work)
+				return
+			}
+		}
+	}()
+}
+
+func (tq *taskQueue[T]) cancelWork(ch chan *Task[T]) {
+	for t := range ch {
 		select {
 		case <-t.Done():
 		default:

@@ -201,9 +201,10 @@ func main() {
 
 	q := patterns.NewQueue(
 		patterns.WithWorkers[string](4),
-		// patterns.WithQueueBuffer[string](1000),
+		// patterns.WithQueueBuffer[string](500),
 		patterns.WithPanicDefer(badLuck),
 	)
+	q.Start()
 
 	var wg sync.WaitGroup
 	var (

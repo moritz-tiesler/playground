@@ -10,7 +10,40 @@ func ExecCallBack(cb func(int, int) int, arg int) {
 }
 
 type Mock struct {
-	called int
+	calls      int
+	calledWith [][]reflect.Value
+}
+
+type argVec []reflect.Value
+
+func (av argVec) Equals(other ...any) bool {
+	if len(av) != len(other) {
+		return false
+	}
+	if len(av) == 0 {
+		return true
+	}
+	equals := true
+	for i, v := range av {
+		o := other[i]
+		equals = equals && reflect.DeepEqual(v.Interface(), o)
+		if !equals {
+			break
+		}
+	}
+	return equals
+}
+
+func (m Mock) CallArgs(i int) argVec {
+	return argVec(m.calledWith[i])
+}
+
+func (m Mock) Calls() int {
+	return m.calls
+}
+
+func (m Mock) Called() bool {
+	return m.calls > 0
 }
 
 func MakeMock(fptr any) *Mock {
@@ -26,7 +59,8 @@ func MakeMock(fptr any) *Mock {
 	wrapper := func(in []reflect.Value) []reflect.Value {
 		res := copy.Call(in)
 		// Track call data
-		m.called++
+		m.calledWith = append(m.calledWith, in)
+		m.calls++
 		return res
 	}
 
@@ -50,5 +84,5 @@ func Run() {
 	// execute function with modified impl
 	ExecCallBack(impl, 3)
 	ExecCallBack(impl, 3)
-	fmt.Println(mock.called)
+	fmt.Println(mock.calls)
 }

@@ -1,20 +1,15 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	_ "fmt"
-	"math/rand"
 	_ "playground/blog"
 	_ "playground/encoding"
-	_ "playground/expect"
+	"playground/expect"
 	_ "playground/middleware"
 	_ "playground/options"
-	"playground/patterns"
 	_ "playground/patterns"
 	_ "playground/types"
-	"sync"
-	"time"
 )
 
 func main() {
@@ -46,18 +41,46 @@ func main() {
 	// tString := "aaabcaabdeffabfabuab"
 	// p, c := encoding.MostCommonPair(tString)
 	// fmt.Printf("pair=%s, occured=%d\n", p, c)
-	// aFunction := func(i int) string {
-	// 	return fmt.Sprintf("Called with %d", i)
-	// }
+	type data struct {
+		i int
+		m map[string]int
+	}
 
-	// callMe := func(f func(i int) string, arg int) string {
-	// 	return f(arg)
-	// }
+	aFunction := func(i int, s string, d data) string {
+		return fmt.Sprintf("Called with %d, %s, %v", i, s, d)
+	}
 
-	// mock := exp.Fn(aFunction)
+	callMe := func(
+		f func(i int, s string, d data) string,
+		arg1 int,
+		arg2 string,
+		arg3 data,
+	) string {
+		return f(arg1, arg2, arg3)
+	}
 
-	// res := callMe(aFunction, 4)
-	// fmt.Println(res)
+	mock := expect.MakeMock(&aFunction)
+
+	callMe(
+		aFunction,
+		4,
+		"yo",
+		data{
+			3,
+			map[string]int{"one": 1},
+		},
+	)
+
+	fmt.Println(
+		mock.CallArgs(0).Equals(
+			4,
+			"yo",
+			data{
+				3,
+				map[string]int{"one": 1},
+			},
+		),
+	)
 
 	// testVal := 0
 
@@ -195,82 +218,82 @@ func main() {
 	// s := middleware.NewServer()
 	// s.ListenAndServe()
 
-	badLuck := func(r any, _ *string, err *error) {
-		*err = fmt.Errorf("toobad")
-	}
+	// badLuck := func(r any, _ *string, err *error) {
+	// 	*err = fmt.Errorf("toobad")
+	// }
 
-	q := patterns.NewQueue(
-		patterns.WithWorkers[string](4),
-		// patterns.WithQueueBuffer[string](500),
-		patterns.WithPanicDefer(badLuck),
-	)
-	q.Start()
+	// q := patterns.NewQueue(
+	// 	patterns.WithWorkers[string](4),
+	// 	// patterns.WithQueueBuffer[string](500),
+	// 	patterns.WithPanicDefer(badLuck),
+	// )
+	// q.Start()
 
-	var wg sync.WaitGroup
-	var (
-		cm        sync.Mutex
-		completed int
-		killed    int
-		canceled  int
-		queued    int = 500
-		paniced   int
-		otherErr  int
-	)
-	for i := range queued {
-		s := rand.Intn(200)
-		f := func() (res string, err error) {
-			if s%15 == 0 {
-				panic("bad number")
-			}
-			fmt.Printf("func (%d) running\n", i)
-			time.Sleep(time.Millisecond * time.Duration(s))
-			return
-		}
-		t := q.Push(f)
-		if s%7 == 0 {
-			go func() {
-				<-time.After(time.Millisecond * time.Duration(s) / time.Duration(2))
-				t.Cancel()
-			}()
-		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-t.Done()
-			cm.Lock()
-			defer cm.Unlock()
-			if t.Err != nil {
-				if errors.Is(t.Err, patterns.TaskKilled) {
-					killed++
-					return
-				}
-				if errors.Is(t.Err, patterns.TaskCanceled) {
-					canceled++
-					return
-				}
-				if errors.Is(t.Err, patterns.ErrTaskPanic) {
-					paniced++
-					return
-				}
-				otherErr++
-				return
-			}
-			completed++
-			fmt.Printf("func (%d) done\n", i)
-		}()
+	// var wg sync.WaitGroup
+	// var (
+	// 	cm        sync.Mutex
+	// 	completed int
+	// 	killed    int
+	// 	canceled  int
+	// 	queued    int = 500
+	// 	paniced   int
+	// 	otherErr  int
+	// )
+	// for i := range queued {
+	// 	s := rand.Intn(200)
+	// 	f := func() (res string, err error) {
+	// 		if s%15 == 0 {
+	// 			panic("bad number")
+	// 		}
+	// 		fmt.Printf("func (%d) running\n", i)
+	// 		time.Sleep(time.Millisecond * time.Duration(s))
+	// 		return
+	// 	}
+	// 	t := q.Push(f)
+	// 	if s%7 == 0 {
+	// 		go func() {
+	// 			<-time.After(time.Millisecond * time.Duration(s) / time.Duration(2))
+	// 			t.Cancel()
+	// 		}()
+	// 	}
+	// 	wg.Add(1)
+	// 	go func() {
+	// 		defer wg.Done()
+	// 		<-t.Done()
+	// 		cm.Lock()
+	// 		defer cm.Unlock()
+	// 		if t.Err != nil {
+	// 			if errors.Is(t.Err, patterns.TaskKilled) {
+	// 				killed++
+	// 				return
+	// 			}
+	// 			if errors.Is(t.Err, patterns.TaskCanceled) {
+	// 				canceled++
+	// 				return
+	// 			}
+	// 			if errors.Is(t.Err, patterns.ErrTaskPanic) {
+	// 				paniced++
+	// 				return
+	// 			}
+	// 			otherErr++
+	// 			return
+	// 		}
+	// 		completed++
+	// 		fmt.Printf("func (%d) done\n", i)
+	// 	}()
 
-	}
-	go func() {
-		<-time.After(3 * time.Second)
-		_ = q.Kill()
-	}()
-	wg.Wait()
-	fmt.Printf("%d/%d tasks completed\n", completed, queued)
-	fmt.Printf("%d/%d tasks canceled\n", canceled, queued)
-	fmt.Printf("%d/%d tasks killed\n", killed, queued)
-	fmt.Printf("%d/%d tasks paniced\n", paniced, queued)
-	fmt.Printf("%d/%d tasks errored\n", otherErr, queued)
-	fmt.Printf("%d/%d tasks accounted for\n", otherErr+paniced+killed+completed+canceled, queued)
+	// }
+	// go func() {
+	// 	<-time.After(3 * time.Second)
+	// 	_ = q.Kill()
+	// }()
+	// wg.Wait()
+	// fmt.Printf("%d/%d tasks completed\n", completed, queued)
+	// fmt.Printf("%d/%d tasks canceled\n", canceled, queued)
+	// fmt.Printf("%d/%d tasks killed\n", killed, queued)
+	// fmt.Printf("%d/%d tasks paniced\n", paniced, queued)
+	// fmt.Printf("%d/%d tasks errored\n", otherErr, queued)
+	// fmt.Printf("%d/%d tasks accounted for\n", otherErr+paniced+killed+completed+canceled, queued)
 
 }
 

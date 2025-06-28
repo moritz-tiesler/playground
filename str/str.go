@@ -57,7 +57,7 @@ func ToSnakeBuilder(camel string) (string, bool) {
 	for _, r := range camel {
 		if unicode.IsUpper(rune(r)) {
 			// Push caps to queue, append to output later
-			queue.WriteRune(unicode.ToLower(rune(r)))
+			queue.WriteRune(unicode.ToLower(r))
 			continue
 		}
 		if queue.Len() <= 0 {

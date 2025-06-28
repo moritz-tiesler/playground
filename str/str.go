@@ -1,7 +1,6 @@
 package str
 
 import (
-	"bytes"
 	"strings"
 	"unicode"
 )
@@ -53,14 +52,16 @@ func ToSnakeBuilder(camel string) (string, bool) {
 	out := strings.Builder{}
 	out.Grow(len(camel))
 	written := 0
-	queue := bytes.Buffer{}
+	queue := make([]rune, len(camel))
+	runesQueued := 0
 	for _, r := range camel {
 		if unicode.IsUpper(rune(r)) {
 			// Push caps to queue, append to output later
-			queue.WriteRune(unicode.ToLower(r))
+			queue[runesQueued] = unicode.ToLower(r)
+			runesQueued++
 			continue
 		}
-		if queue.Len() <= 0 {
+		if runesQueued <= 0 {
 			// no caps letters to write
 			n, _ := out.WriteRune(r)
 			written += n
@@ -73,22 +74,28 @@ func ToSnakeBuilder(camel string) (string, bool) {
 			written += n
 		}
 		// convert queued caps and write to output
-		if queue.Len() > 1 {
+		if runesQueued > 1 {
 			// case 'CONSTANTVar' -> 'constant_var'
-
-			n, _ := out.Write(queue.Next(queue.Len() - 1))
+			i := 0
+			for ; i < runesQueued-1; i++ {
+				n, _ := out.WriteRune(queue[i])
+				written += n
+			}
+			n, _ := out.WriteRune('_')
 			written += n
-			n, _ = out.WriteRune('_')
-			written += n
-			queue.WriteTo(&out)
+			out.WriteRune(queue[runesQueued-1])
+			runesQueued = 0
 			written += 1
 
 		} else {
 			// case 'Var' -> 'var'
-			n, _ := out.Write(queue.Next(1))
+			if runesQueued != 1 {
+				panic("uh oh")
+			}
+			n, _ := out.WriteRune(queue[runesQueued-1])
+			runesQueued = 0
 			written += n
 		}
-		queue.Reset()
 		n, _ := out.WriteRune(r)
 		written += n
 	}

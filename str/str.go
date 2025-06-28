@@ -41,6 +41,10 @@ func ToSnake(camel string) (string, bool) {
 		queue = ""
 		out += string(r)
 	}
+	if len(queue) > 0 {
+		out += "_"
+		out += queue
+	}
 	return out, true
 }
 
@@ -89,15 +93,16 @@ func ToSnakeBuilder(camel string) (string, bool) {
 
 		} else {
 			// case 'Var' -> 'var'
-			if runesQueued != 1 {
-				panic("uh oh")
-			}
 			n, _ := out.WriteRune(queue[runesQueued-1])
 			runesQueued = 0
 			written += n
 		}
 		n, _ := out.WriteRune(r)
 		written += n
+	}
+	if runesQueued > 0 {
+		out.WriteRune('_')
+		out.WriteRune(queue[runesQueued-1])
 	}
 	return out.String(), true
 }

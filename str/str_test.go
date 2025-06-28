@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	s = "MyFancyBÄSICVar"
-	e = "my_fancy_bäsic_var"
+	s = "MyFancyBÄSICVarÉ"
+	e = "my_fancy_bäsic_var_é"
 )
 
 func BenchmarkToSnakeStringAppend(b *testing.B) {

@@ -54,15 +54,13 @@ func ToSnakeBuilder(camel string) (string, bool) {
 	out.Grow(len(camel))
 	written := 0
 	queue := bytes.Buffer{}
-	qLen := 0
 	for _, r := range camel {
 		if unicode.IsUpper(rune(r)) {
 			// Push caps to queue, append to output later
-			n, _ := queue.WriteRune(unicode.ToLower(rune(r)))
-			qLen += n
+			queue.WriteRune(unicode.ToLower(rune(r)))
 			continue
 		}
-		if qLen <= 0 {
+		if queue.Len() <= 0 {
 			// no caps letters to write
 			n, _ := out.WriteRune(r)
 			written += n
@@ -75,16 +73,15 @@ func ToSnakeBuilder(camel string) (string, bool) {
 			written += n
 		}
 		// convert queued caps and write to output
-		if qLen > 1 {
+		if queue.Len() > 1 {
 			// case 'CONSTANTVar' -> 'constant_var'
 
-			n, _ := out.Write(queue.Next(qLen - 1))
+			n, _ := out.Write(queue.Next(queue.Len() - 1))
 			written += n
 			n, _ = out.WriteRune('_')
 			written += n
 			queue.WriteTo(&out)
 			written += 1
-			qLen = 0
 
 		} else {
 			// case 'Var' -> 'var'
@@ -92,7 +89,6 @@ func ToSnakeBuilder(camel string) (string, bool) {
 			written += n
 		}
 		queue.Reset()
-		qLen = 0
 		n, _ := out.WriteRune(r)
 		written += n
 	}

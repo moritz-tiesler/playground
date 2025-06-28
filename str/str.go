@@ -1,6 +1,10 @@
 package str
 
-import "unicode"
+import (
+	"bytes"
+	"strings"
+	"unicode"
+)
 
 func ToSnake(camel string) (string, bool) {
 
@@ -39,4 +43,58 @@ func ToSnake(camel string) (string, bool) {
 		out += string(r)
 	}
 	return out, true
+}
+
+func ToSnakeBuilder(camel string) (string, bool) {
+
+	if len(camel) == 0 {
+		return "", false
+	}
+	out := strings.Builder{}
+	out.Grow(len(camel))
+	written := 0
+	queue := bytes.Buffer{}
+	qLen := 0
+	for _, r := range camel {
+		if unicode.IsUpper(rune(r)) {
+			// Push caps to queue, append to output later
+			n, _ := queue.WriteRune(unicode.ToLower(rune(r)))
+			qLen += n
+			continue
+		}
+		if qLen <= 0 {
+			// no caps letters to write
+			n, _ := out.WriteRune(r)
+			written += n
+			continue
+		}
+
+		if written > 0 {
+			// avoid writing '_' to front of output
+			n, _ := out.WriteRune('_')
+			written += n
+		}
+		// convert queued caps and write to output
+		if qLen > 1 {
+			// case 'CONSTANTVar' -> 'constant_var'
+
+			n, _ := out.Write(queue.Next(qLen - 1))
+			written += n
+			n, _ = out.WriteRune('_')
+			written += n
+			queue.WriteTo(&out)
+			written += 1
+			qLen = 0
+
+		} else {
+			// case 'Var' -> 'var'
+			n, _ := out.Write(queue.Next(1))
+			written += n
+		}
+		queue.Reset()
+		qLen = 0
+		n, _ := out.WriteRune(r)
+		written += n
+	}
+	return out.String(), true
 }

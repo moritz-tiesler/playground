@@ -166,3 +166,13 @@ func SplitCamel(s string) []string {
 	chunks := SplitBeforeFunc(s, camelSplit)
 	return chunks
 }
+
+func ToSnakePrimitives(camel string) (string, bool) {
+	parts := SplitCamel(camel)
+	for i, p := range parts {
+		first := p[0]
+		parts[i] = string(unicode.ToLower(rune(first))) + p[1:]
+	}
+
+	return strings.Join(parts, "_"), true
+}

@@ -94,11 +94,31 @@ func TestStrSplitBeforeFunc(t *testing.T) {
 }
 
 func TestStrSplitCamel(t *testing.T) {
-	v := "MyCoolVarVa"
+	v := "MyCoolVar"
 	chunks := SplitCamel(v)
 
 	expected := []string{"My", "Cool", "Var"}
 	if !reflect.DeepEqual(chunks, expected) {
 		t.Errorf("expected=%v got=%v", expected, chunks)
+	}
+}
+
+func TestToSnakePrimitives(t *testing.T) {
+	v := "MyCoolVarVa"
+	snake, _ := ToSnakePrimitives(v)
+	expected := "my_cool_var_va"
+	if !reflect.DeepEqual(snake, expected) {
+		t.Errorf("expected=%v got=%v", expected, snake)
+	}
+}
+
+func BenchmarkToSnakePrimitives(b *testing.B) {
+	s := "MyFancyBasicVar"
+	e := "my_fancy_basic_var"
+	for b.Loop() {
+		sn, _ := ToSnake(s)
+		if sn != e {
+			b.Fatalf("expected=%s, got=%s", e, sn)
+		}
 	}
 }

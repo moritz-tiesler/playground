@@ -106,3 +106,63 @@ func ToSnakeBuilder(camel string) (string, bool) {
 	}
 	return out.String(), true
 }
+
+func SplitFunc(s string, f func(rune) bool) []string {
+	a := []string{}
+	left := 0
+	for i, r := range s {
+		doSplit := f(r)
+		if doSplit {
+			chunk := s[left:i]
+			a = append(a, chunk)
+			left = i + 1
+		}
+	}
+	a = append(a, s[left:])
+	return a
+}
+
+func SplitBeforeFunc(s string, f func(rune) bool) []string {
+
+	a := []string{}
+	left := 0
+	for i, r := range s {
+		doSplit := f(r)
+		if doSplit {
+			var chunk string
+			chunk = s[left:i]
+			a = append(a, chunk)
+			left = i
+		}
+	}
+	a = append(a, s[left:])
+	return a
+}
+
+func SplitAfterFunc(s string, f func(rune) bool) []string {
+	a := []string{}
+	left := 0
+	for i, r := range s {
+		doSplit := f(r)
+		if doSplit {
+			chunk := s[left : i+1]
+			a = append(a, chunk)
+			left = i + 1
+		}
+	}
+	a = append(a, s[left:])
+	return a
+}
+func SplitCamel(s string) []string {
+
+	var prev rune = 0
+
+	camelSplit := func(r rune) bool {
+		doSplit := prev != 0 && unicode.IsLower(prev) && unicode.IsUpper(r)
+		prev = r
+		return doSplit
+	}
+
+	chunks := SplitBeforeFunc(s, camelSplit)
+	return chunks
+}

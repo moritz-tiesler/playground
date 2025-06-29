@@ -1,6 +1,8 @@
 package str
 
 import (
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -24,5 +26,79 @@ func BenchmarkToSnakeStringBuilder(b *testing.B) {
 		if sn != e {
 			b.Fatalf("expected=%s, got=%s", e, sn)
 		}
+	}
+}
+
+func TestStrSplitFunc(t *testing.T) {
+	v := "aaa-bbb-ccc-"
+	chunks := SplitFunc(v, func(r rune) bool {
+		return r == '-'
+	})
+
+	expected := strings.Split(v, "-")
+	if !reflect.DeepEqual(chunks, expected) {
+		t.Errorf("expected=%v got=%v", expected, chunks)
+	}
+
+	v = "aaa-bbb-ccc-"
+	chunks = SplitFunc(v, func(r rune) bool {
+		return r == '_'
+	})
+
+	expected = strings.Split(v, "_")
+	if !reflect.DeepEqual(chunks, expected) {
+		t.Errorf("expected=%v got=%v", expected, chunks)
+	}
+}
+func TestStrSplitAfterFunc(t *testing.T) {
+	v := "aaa-bbb-ccc-"
+	chunks := SplitAfterFunc(v, func(r rune) bool {
+		return r == '-'
+	})
+
+	expected := strings.SplitAfter(v, "-")
+	if !reflect.DeepEqual(chunks, expected) {
+		t.Errorf("expected=%v got=%v", expected, chunks)
+	}
+
+	v = "aaa-bbb-ccc-"
+	chunks = SplitAfterFunc(v, func(r rune) bool {
+		return r == '_'
+	})
+
+	expected = strings.SplitAfter(v, "_")
+	if !reflect.DeepEqual(chunks, expected) {
+		t.Errorf("expected=%v got=%v", expected, chunks)
+	}
+}
+func TestStrSplitBeforeFunc(t *testing.T) {
+	v := "aaa-bbb-ccc-"
+	chunks := SplitBeforeFunc(v, func(r rune) bool {
+		return r == '-'
+	})
+
+	expected := []string{"aaa", "-bbb", "-ccc", "-"}
+	if !reflect.DeepEqual(chunks, expected) {
+		t.Errorf("expected=%v got=%v", expected, chunks)
+	}
+
+	v = "aaa-bbb-ccc-"
+	chunks = SplitBeforeFunc(v, func(r rune) bool {
+		return r == '_'
+	})
+
+	expected = []string{v}
+	if !reflect.DeepEqual(chunks, expected) {
+		t.Errorf("expected=%v got=%v", expected, chunks)
+	}
+}
+
+func TestStrSplitCamel(t *testing.T) {
+	v := "MyCoolVarVa"
+	chunks := SplitCamel(v)
+
+	expected := []string{"My", "Cool", "Var"}
+	if !reflect.DeepEqual(chunks, expected) {
+		t.Errorf("expected=%v got=%v", expected, chunks)
 	}
 }

@@ -39,24 +39,46 @@ func TestToSorted(t *testing.T) {
 	}
 }
 
+var max = 1 << 16
+
 func BenchmarkToSortedAppend(b *testing.B) {
-	max := 1 << 15
 	u := make([]int, max)
-	for i := 0; i < len(u); i++ {
+	u[0] = max
+	for i := 1; i < len(u); i++ {
 		u[i] = rand.IntN(max)
 	}
 	for b.Loop() {
-		_ = ToSortedAppend(u)
+		s := ToSortedAppend(u)
+		if s[len(s)-1] != max {
+			b.Errorf("sorting wrong")
+		}
 	}
 }
 
 func BenchmarkToSortedClone(b *testing.B) {
-	max := 1 << 15
 	u := make([]int, max)
-	for i := 0; i < len(u); i++ {
+	u[0] = max
+	for i := 1; i < len(u); i++ {
 		u[i] = rand.IntN(max)
 	}
 	for b.Loop() {
-		_ = ToSortedClone(u)
+		s := ToSortedClone(u)
+		if s[len(s)-1] != max {
+			b.Errorf("sorting wrong")
+		}
+	}
+}
+
+func BenchmarkToSortedSeq(b *testing.B) {
+	u := make([]int, max)
+	u[0] = max
+	for i := 1; i < len(u); i++ {
+		u[i] = rand.IntN(max)
+	}
+	for b.Loop() {
+		s := slices.Sorted(slices.Values(u))
+		if s[len(s)-1] != max {
+			b.Errorf("sorting wrong")
+		}
 	}
 }
